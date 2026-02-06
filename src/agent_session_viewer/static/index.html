@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Session Log Viewer</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Session Log Viewer</h1>
+        <p class="subtitle">Browse Codex & Claude sessions without leaving the terminal</p>
+      </div>
+      <div class="status">
+        <button id="kill-switch" class="kill-button" title="Kill all Codex executables">KILL</button>
+        <span id="root-path"></span>
+        <span id="runtime-meta" class="runtime-meta"></span>
+        <button id="sessions-root" title="Change sessions directory">Sessions...</button>
+        <button id="refresh-sessions" title="Reload session list">Refresh</button>
+      </div>
+    </header>
+
+    <nav>
+      <button class="nav-link active" data-panel="codex">Sessions</button>
+      <button class="nav-link" data-panel="logs">JVS Logs</button>
+      <button class="nav-link" data-panel="artifacts">Artifacts</button>
+    </nav>
+
+    <main>
+      <div class="panel active" id="panel-codex">
+        <div class="codex-layout">
+          <aside>
+            <div class="pane-title">Sessions</div>
+            <input type="search" id="session-filter" placeholder="Filter sessions..." />
+            <ul id="session-list"></ul>
+          </aside>
+
+          <section class="codex-main">
+            <div class="event-column">
+              <div class="pane-title">
+                <span id="session-name">Select a session to inspect</span>
+              </div>
+              <div id="session-meta" class="session-meta hidden"></div>
+              <div class="controls">
+                <label>
+                  Contains
+                  <input type="search" id="contains-input" placeholder="text filter" />
+                </label>
+                <label>
+                  Limit
+                  <select id="limit-select">
+                    <option value="100">100</option>
+                    <option value="200" selected>200</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                  </select>
+                </label>
+                <button id="apply-filter">Apply</button>
+              </div>
+              <div class="pagination">
+                <button id="prev-page" disabled>&larr; Prev</button>
+                <span id="page-meta"></span>
+                <div class="page-buttons">
+                  <button id="next-page" disabled>Next &rarr;</button>
+                  <button id="last-page" disabled>Last &rarr;</button>
+                  <button id="live-mode" class="live-button" title="Show newest events first">Live</button>
+                </div>
+              </div>
+              <div id="event-list" class="event-list"></div>
+            </div>
+
+            <div class="toolcalls-column">
+              <div class="pane-title">Tool Calls</div>
+              <div class="toolcalls-controls">
+                <label>
+                  Contains
+                  <input type="search" id="toolcalls-filter" placeholder="call_id, tool name..." />
+                </label>
+                <label>
+                  Limit
+                  <select id="toolcalls-limit">
+                    <option value="100">100</option>
+                    <option value="200" selected>200</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                  </select>
+                </label>
+                <button id="toolcalls-live" class="live-button" title="Auto-refresh">Live</button>
+                <button id="toolcalls-refresh">Refresh</button>
+              </div>
+              <div id="toolcalls-meta" class="toolcalls-meta"></div>
+              <div id="toolcalls-list" class="toolcalls-list">(select a session)</div>
+            </div>
+
+            <div class="reasoning-column">
+              <div class="pane-title">Reasoning</div>
+              <div class="reasoning-controls">
+                <label>
+                  Contains
+                  <input type="search" id="reasoning-filter" placeholder="search..." />
+                </label>
+                <label>
+                  Limit
+                  <select id="reasoning-limit">
+                    <option value="100">100</option>
+                    <option value="200" selected>200</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                  </select>
+                </label>
+                <button id="reasoning-live" class="live-button" title="Auto-refresh">Live</button>
+                <button id="reasoning-refresh">Refresh</button>
+              </div>
+              <div id="reasoning-meta" class="reasoning-meta"></div>
+              <div id="reasoning-list" class="reasoning-list">(select a session)</div>
+            </div>
+
+            <div class="conversation-column">
+              <div class="pane-title">Conversation</div>
+              <div class="conversation-actions">
+                <button id="conversation-save">Save Chat</button>
+                <button id="conversation-download">Download</button>
+              </div>
+              <div id="conversation-list" class="conversation-list">(select a session)</div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-logs">
+        <div class="log-layout">
+          <aside>
+            <div class="pane-title">Log Files</div>
+            <input type="search" id="log-filter" placeholder="Filter logs..." />
+            <ul id="log-list"></ul>
+          </aside>
+          <section>
+            <div class="pane-title">
+              <span id="log-name">Select a log file</span>
+              <div class="log-controls">
+                <label>
+                  Tail lines
+                  <input type="number" id="log-lines" value="2000" min="10" max="20000" />
+                </label>
+                <button id="log-refresh">Refresh</button>
+              </div>
+            </div>
+            <pre id="log-content" class="log-content">(no log selected)</pre>
+          </section>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-artifacts">
+        <div class="artifacts-header">
+          <div class="pane-title">Artifacts</div>
+          <label>
+            Root
+            <select id="artifact-root">
+              <option value="data">jvs/data</option>
+              <option value="reports">jvs/reports</option>
+            </select>
+          </label>
+          <button id="artifact-refresh">Refresh</button>
+        </div>
+        <div class="artifact-table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Path</th>
+                <th>Size</th>
+                <th>Modified</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="artifact-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <p>
+        Unified viewer for <code>.codex/sessions</code> and <code>~/.claude/projects</code>.
+        Format auto-detected.
+      </p>
+    </footer>
+
+    <script type="module" src="/static/app.js"></script>
+  </body>
+</html>
